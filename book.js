@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 
 require('dotenv').config();
-const fs = require('fs');
-const path  = require('path');
+const fs   = require('fs');
+const path = require('path');
+const { sendWhatsApp } = require('./notify');
 
 // ─── Fixos: Silo Studio + Gabw + Combo corte + barba ─────────────────────────
 const ESTABLISHMENT = '25897608';
@@ -24,14 +25,10 @@ function log(msg) {
   fs.appendFileSync(path.join(LOGS, 'book.log'), line + '\n');
 }
 
-async function sendWhatsApp(msg) {
-  const { WHATSAPP_PHONE: phone, CALLMEBOT_APIKEY: key } = process.env;
-  if (!phone || !key) { log(`[WA não configurado] ${msg}`); return; }
-  const url = `https://api.callmebot.com/whatsapp.php?phone=${phone}&text=${encodeURIComponent(msg)}&apikey=${key}`;
+async function notificar(msg) {
   try {
-    const res  = await fetch(url);
-    const body = await res.text();
-    log(`WA enviado (${res.status}): ${body.slice(0, 80)}`);
+    await notificar(msg);
+    log('WA enviado');
   } catch (e) {
     log(`WA erro: ${e.message}`);
   }
@@ -108,7 +105,7 @@ async function main() {
       ({ httpStatus, data } = await tryBook(startDate));
     } catch (e) {
       log(`Erro de rede: ${e.message}`);
-      await sendWhatsApp(`❌ Erro de rede ao agendar: ${e.message}`);
+      await notificar(`❌ Erro de rede ao agendar: ${e.message}`);
       return;
     }
 
@@ -116,7 +113,7 @@ async function main() {
 
     if (httpStatus === 401) {
       log('Token expirado — atualize APPBARBER_AUTH no .env');
-      await sendWhatsApp(
+      await notificar(
         '❌ Token AppBarber expirado! Abra o site, vá em DevTools → Network → ' +
         'clique em qualquer req para apiclient.appbarber.com.br → Request Headers → ' +
         'copie o valor de "Authorization" → atualize APPBARBER_AUTH no .env'
@@ -128,7 +125,7 @@ async function main() {
     if (!data?.error && appt?.error === 0) {
       const time = slot.slice(0, 5);
       log(`Agendado! ${appt.result} | código ${appt.scheduling_code}`);
-      await sendWhatsApp(`✅ Agendado! Combo corte+barba com Gabw | Sexta ${label} às ${time} | Silo Studio 💈`);
+      await notificar(`✅ Agendado! Combo corte+barba com Gabw | Sexta ${label} às ${time} | Silo Studio 💈`);
       return;
     }
 
@@ -137,7 +134,7 @@ async function main() {
   }
 
   log('Sem horários 13h-14h disponíveis');
-  await sendWhatsApp(
+  await notificar(
     `⚠️ Nenhum horário 13h-14h com Gabw para ${label}. ` +
     'Agende manualmente: https://sites.appbarber.com.br/silostudio'
   );

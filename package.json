@@ -4,9 +4,14 @@
   "description": "Agendamento automático na Silo Studio todo domingo para sexta 13h30",
   "scripts": {
     "start": "node book.js",
-    "test": "node book.js"
+    "test": "node book.js",
+    "setup-whatsapp": "node setup-whatsapp.js",
+    "save-session": "node scripts/save-wa-session.js",
+    "restore-session": "node scripts/restore-wa-session.js"
   },
   "dependencies": {
-    "dotenv": "^16.4.5"
+    "@whiskeysockets/baileys": "^6.7.16",
+    "dotenv": "^16.4.5",
+    "pino": "^9.5.0"
   }
 }

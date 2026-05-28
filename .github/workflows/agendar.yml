@@ -10,15 +10,34 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+          cache: 'npm'
+
       - run: npm install
-      - run: node book.js
+
+      - name: Restaurar sessão WhatsApp
+        run: node scripts/restore-wa-session.js
         env:
-          APPBARBER_AUTH: ${{ secrets.APPBARBER_AUTH }}
-          APPBARBER_CLIENT_ID: ${{ secrets.APPBARBER_CLIENT_ID }}
-          APPBARBER_DEVICE_ID: ${{ secrets.APPBARBER_DEVICE_ID }}
+          GIST_ID: ${{ secrets.GIST_ID }}
+          GH_PAT:  ${{ secrets.GH_PAT }}
+
+      - name: Agendar horário
+        run: node book.js
+        env:
+          APPBARBER_AUTH:        ${{ secrets.APPBARBER_AUTH }}
+          APPBARBER_CLIENT_ID:   ${{ secrets.APPBARBER_CLIENT_ID }}
+          APPBARBER_DEVICE_ID:   ${{ secrets.APPBARBER_DEVICE_ID }}
           APPBARBER_CLIENT_CODE: ${{ secrets.APPBARBER_CLIENT_CODE }}
-          WHATSAPP_PHONE: ${{ secrets.WHATSAPP_PHONE }}
-          CALLMEBOT_APIKEY: ${{ secrets.CALLMEBOT_APIKEY }}
+          RECIPIENT_PHONE:       ${{ secrets.RECIPIENT_PHONE }}
+          GIST_ID:               ${{ secrets.GIST_ID }}
+          GH_PAT:                ${{ secrets.GH_PAT }}
+
+      - name: Salvar sessão WhatsApp
+        if: always()
+        run: node scripts/save-wa-session.js
+        env:
+          GIST_ID: ${{ secrets.GIST_ID }}
+          GH_PAT:  ${{ secrets.GH_PAT }}
