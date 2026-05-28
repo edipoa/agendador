@@ -1,0 +1,12 @@
+{
+  "name": "agendador-barbeiro",
+  "version": "1.0.0",
+  "description": "Agendamento automático na Silo Studio todo domingo para sexta 13h30",
+  "scripts": {
+    "start": "node book.js",
+    "test": "node book.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5"
+  }
+}
