@@ -1,8 +1,7 @@
 #!/usr/bin/env node
 
 require('dotenv').config();
-const https = require('https');
-const fs    = require('fs');
+const fs = require('fs');
 const path  = require('path');
 
 // ─── Fixos: Silo Studio + Gabw + Combo corte + barba ─────────────────────────
@@ -29,10 +28,13 @@ async function sendWhatsApp(msg) {
   const { WHATSAPP_PHONE: phone, CALLMEBOT_APIKEY: key } = process.env;
   if (!phone || !key) { log(`[WA não configurado] ${msg}`); return; }
   const url = `https://api.callmebot.com/whatsapp.php?phone=${phone}&text=${encodeURIComponent(msg)}&apikey=${key}`;
-  return new Promise(resolve =>
-    https.get(url, () => { log('WA enviado'); resolve(); })
-        .on('error', e => { log(`WA erro: ${e.message}`); resolve(); })
-  );
+  try {
+    const res  = await fetch(url);
+    const body = await res.text();
+    log(`WA enviado (${res.status}): ${body.slice(0, 80)}`);
+  } catch (e) {
+    log(`WA erro: ${e.message}`);
+  }
 }
 
 // Próxima sexta a partir de hoje (se hoje é domingo, retorna a sexta em 5 dias)
