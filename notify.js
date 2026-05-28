@@ -1,35 +1,35 @@
 require('dotenv').config();
-const { spawn } = require('child_process');
-const path = require('path');
 
 async function sendWhatsApp(message) {
-  return new Promise((resolve, reject) => {
-    const child = spawn(
-      process.execPath,
-      [path.join(__dirname, 'send-whatsapp.js')],
-      {
-        env: { ...process.env, WA_MESSAGE: message },
-        stdio: 'inherit',
-      }
-    );
+  const apiKey = process.env.RESEND_API_KEY;
+  const to     = process.env.RECIPIENT_EMAIL;
 
-    const timer = setTimeout(() => {
-      child.kill();
-      reject(new Error('Timeout 60s ao enviar WhatsApp'));
-    }, 60000);
+  if (!apiKey) throw new Error('RESEND_API_KEY não configurado');
+  if (!to)     throw new Error('RECIPIENT_EMAIL não configurado');
 
-    child.on('close', code => {
-      clearTimeout(timer);
-      if (code === 0) resolve();
-      else if (code === 2) reject(new Error('Sessão expirada — execute: node setup-whatsapp.js'));
-      else reject(new Error(`WhatsApp script falhou (exit ${code})`));
-    });
-
-    child.on('error', err => {
-      clearTimeout(timer);
-      reject(err);
-    });
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization:  `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from:    'Agendador Barbeiro <onboarding@resend.dev>',
+      to:      [to],
+      subject: 'Agendador Barbeiro 💈',
+      text:    message,
+      headers: {
+        'X-Priority':        '1',
+        'X-MSMail-Priority': 'High',
+        'Importance':        'High',
+      },
+    }),
   });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(`Resend erro ${res.status}: ${err.message ?? res.statusText}`);
+  }
 }
 
 module.exports = { sendWhatsApp };

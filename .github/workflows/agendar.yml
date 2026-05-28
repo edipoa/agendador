@@ -18,12 +18,6 @@ jobs:
 
       - run: npm install
 
-      - name: Restaurar sessão WhatsApp
-        run: node scripts/restore-wa-session.js
-        env:
-          GIST_ID: ${{ secrets.GIST_ID }}
-          GH_PAT:  ${{ secrets.GH_PAT }}
-
       - name: Agendar horário
         run: node book.js
         env:
@@ -31,13 +25,5 @@ jobs:
           APPBARBER_CLIENT_ID:   ${{ secrets.APPBARBER_CLIENT_ID }}
           APPBARBER_DEVICE_ID:   ${{ secrets.APPBARBER_DEVICE_ID }}
           APPBARBER_CLIENT_CODE: ${{ secrets.APPBARBER_CLIENT_CODE }}
-          RECIPIENT_PHONE:       ${{ secrets.RECIPIENT_PHONE }}
-          GIST_ID:               ${{ secrets.GIST_ID }}
-          GH_PAT:                ${{ secrets.GH_PAT }}
-
-      - name: Salvar sessão WhatsApp
-        if: always()
-        run: node scripts/save-wa-session.js
-        env:
-          GIST_ID: ${{ secrets.GIST_ID }}
-          GH_PAT:  ${{ secrets.GH_PAT }}
+          RESEND_API_KEY:        ${{ secrets.RESEND_API_KEY }}
+          RECIPIENT_EMAIL:       ${{ secrets.RECIPIENT_EMAIL }}
