@@ -27,7 +27,7 @@ function log(msg) {
 
 async function notificar(msg) {
   try {
-    await notificar(msg);
+    await sendWhatsApp(msg);
     log('WA enviado');
   } catch (e) {
     log(`WA erro: ${e.message}`);
