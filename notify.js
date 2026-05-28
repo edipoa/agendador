@@ -1,5 +1,5 @@
 require('dotenv').config();
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
+const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
 const pino = require('pino');
 const fs   = require('fs');
 const path = require('path');
@@ -14,43 +14,54 @@ async function sendWhatsApp(message) {
     throw new Error('Sessão não encontrada. Execute: node setup-whatsapp.js');
   }
 
+  const { version }        = await fetchLatestBaileysVersion();
   const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
 
   const sock = makeWASocket({
-    auth:              state,
-    printQRInTerminal: false,
-    logger:            pino({ level: 'silent' }),
-    browser:           ['Agendador Barbeiro', 'Chrome', '120.0'],
+    version,
+    auth:                  state,
+    printQRInTerminal:     false,
+    logger:                pino({ level: 'silent' }),
+    browser:               ['Agendador Barbeiro', 'Chrome', '120.0'],
+    connectTimeoutMs:      30000,
+    defaultQueryTimeoutMs: 30000,
   });
 
   sock.ev.on('creds.update', saveCreds);
 
   await new Promise((resolve, reject) => {
-    const timer = setTimeout(() => {
-      try { sock.end(); } catch (_) {}
-      reject(new Error('Timeout 30s ao conectar ao WhatsApp'));
-    }, 30000);
+    let settled = false;
+
+    const done = (fn) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      // Fecha o socket fora do call stack atual para evitar recursão
+      setImmediate(() => { try { sock.ws?.close(); } catch (_) {} });
+      fn();
+    };
+
+    const timer = setTimeout(
+      () => done(() => reject(new Error('Timeout 30s ao conectar ao WhatsApp'))),
+      30000
+    );
 
     sock.ev.on('connection.update', async ({ connection, lastDisconnect }) => {
       if (connection === 'open') {
         try {
           await sock.sendMessage(`${recipient}@s.whatsapp.net`, { text: message });
-          clearTimeout(timer);
-          try { sock.end(); } catch (_) {}
-          resolve();
+          done(resolve);
         } catch (e) {
-          clearTimeout(timer);
-          reject(e);
+          done(() => reject(e));
         }
       }
 
-      if (connection === 'close') {
-        clearTimeout(timer);
+      if (connection === 'close' && !settled) {
         const code = lastDisconnect?.error?.output?.statusCode;
         if (code === DisconnectReason.loggedOut) {
-          reject(new Error('Sessão expirada — execute: node setup-whatsapp.js'));
+          done(() => reject(new Error('Sessão expirada — execute: node setup-whatsapp.js')));
         } else {
-          reject(new Error(`WA conexão fechada: ${lastDisconnect?.error?.message}`));
+          done(() => reject(new Error(`WA conexão fechada (${code}): ${lastDisconnect?.error?.message}`)));
         }
       }
     });
