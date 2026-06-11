@@ -43,6 +43,27 @@ function nextFriday() {
   return fri;
 }
 
+function toIsoDate(date) {
+  const dd = String(date.getDate()).padStart(2, '0');
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  return `${date.getFullYear()}-${mm}-${dd}`;
+}
+
+const MARKER = path.join(LOGS, 'last-booked.txt');
+
+function alreadyBooked(friday) {
+  try {
+    return fs.readFileSync(MARKER, 'utf8').trim() === toIsoDate(friday);
+  } catch {
+    return false;
+  }
+}
+
+function markBooked(friday) {
+  fs.mkdirSync(LOGS, { recursive: true });
+  fs.writeFileSync(MARKER, toIsoDate(friday) + '\n');
+}
+
 function toApiDate(date, time) {
   const dd   = String(date.getDate()).padStart(2, '0');
   const mm   = String(date.getMonth() + 1).padStart(2, '0');
@@ -96,6 +117,11 @@ async function main() {
   const label  = friday.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
   log(`===== Agendamento para ${label} =====`);
 
+  if (alreadyBooked(friday)) {
+    log(`Já agendado para ${toIsoDate(friday)} — nada a fazer`);
+    return;
+  }
+
   for (const slot of SLOTS) {
     const startDate = toApiDate(friday, slot);
     log(`Tentando ${startDate}...`);
@@ -125,6 +151,7 @@ async function main() {
     if (!data?.error && appt?.error === 0) {
       const time = slot.slice(0, 5);
       log(`Agendado! ${appt.result} | código ${appt.scheduling_code}`);
+      markBooked(friday);
       await notificar(`✅ Agendado! Combo corte+barba com Gabw | Sexta ${label} às ${time} | Silo Studio 💈`);
       return;
     }
